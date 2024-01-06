@@ -19,6 +19,7 @@
     "googleapis": "^120.0.0",
     "ical.js": "^1.5.0",
     "moment": "^2.29.4",
+    "node-ical": "^0.17.1",
     "xml2js": "^0.6.0"
   },
   "devDependencies": {

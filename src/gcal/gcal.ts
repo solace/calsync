@@ -17,12 +17,12 @@ const TOKEN_PATH = 'token.json';
 
 const THROTTLING_DELAY = 200; // ms, Google API limit is 10 requests per second
 function throttlingDelay() {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve) => {
     setTimeout(() => {
       resolve();
     }, THROTTLING_DELAY);
   });
-};
+}
 
 export const listEvents = (gcal: GCalDescriptor, start: Date, end: Date): Promise<calendar_v3.Schema$Event[]> => {
   return new Promise((resolve, reject) => {
@@ -138,14 +138,12 @@ function getAccessToken(oAuth2Client, callback) {
 /**
  * Inserts the passed events in the specified calendar. Returns a `Promise`.
  * 
- * @param auth Inser
+ * @param auth Insert
  * @param calendarId 
  * @param events 
- * @param resolve 
- * @param reject 
  */
 function _insertEvents(auth: any, calendarId: string, events: Array<calendar_v3.Schema$Event>) {
-  return new Promise<void>(async (resolve, reject) => {
+  return new Promise<void>(async (resolve) => {
     const calendar = google.calendar({version: 'v3', auth});
 
     for (const evt of events) {
@@ -163,10 +161,10 @@ function _insertEvents(auth: any, calendarId: string, events: Array<calendar_v3.
     }
     resolve();
   });
-};
+}
 
 function _updateEvents(auth: any, calendarId: string, updates: { eventId: string, eventData: CalendarEventData }[]) {
-  return new Promise<void>(async (resolve, reject) => {
+  return new Promise<void>(async (resolve) => {
     const calendar = google.calendar({version: 'v3', auth});
 
     for (const update of updates) {
@@ -185,13 +183,16 @@ function _updateEvents(auth: any, calendarId: string, updates: { eventId: string
     }
     resolve();
   });
-};
+}
 
 
 /**
  * Deletes all upcoming events on the specified calendar. Returns a `Promise`.
  * 
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ * @param {string} calendarId
+ * @param {Date} start
+ * @param {Date} end
  * @returns Promise<unknown>
  */
 function _deleteEvents(auth, calendarId: string, start: Date, end: Date) {

@@ -3,7 +3,7 @@ import * as config from "./config";
 import * as caldav from "./caldav/caldav";
 import * as gcal from "./gcal/gcal";
 import * as sync from "./sync";
-import { log, logWithEventData, logWithGCalEvent } from "./log";
+import { log, logWithEventData } from "./log";
 import { CalendarEvent, isCalDAVEvent, CalDAVEvent } from "./events";
 
 const WRITE_TO_FILE = process.env["WRITE_TO_FILE"] === "true" ?? false;
@@ -49,8 +49,6 @@ async function main() {
           if (nextOccurrenceStartDate < start) continue;
           if (nextOccurrenceStartDate > end) break;
 
-          const eventDuration =
-            event.endDate.getTime() - event.startDate.getTime();
           const nextOccurrenceEndDate = nextOccurrence.endDate.toJSDate();
           const nextOccurrenceEvent: CalDAVEvent = {
             ...event,
@@ -104,7 +102,6 @@ async function main() {
     } else {
       log(`Insert:`);
       instructions.insert.forEach((eventData) => {
-        console.log(eventData);
         logWithEventData(" - ", eventData);
       });
       log(`Update:`);
@@ -130,9 +127,9 @@ async function cleanTarget() {
 }
 
 try {
-  main();
+  void main();
   if (CLEAN_TARGET) {
-    cleanTarget();
+    void cleanTarget();
   }
 } catch (err) {
   log("Error: " + err);

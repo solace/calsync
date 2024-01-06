@@ -28,8 +28,9 @@ This means you **MUST NOT** use your mirroring target for anything else than pro
 1. It copies all upcoming events from the mirrored calendars to the target one.
 1. It doesn't copy events that are marked "free". You may adjust the code if you want to copy them too.
 1. It redacts the event summary using a string provided in the config, so personal information is not copied to the target calendars.
-1. You may use a special character in your event's summary to prevent the redacting of the summary (cf. `FORCE_SHARING_SIGN` in the config).
-1. Only the minimum information of the events is copied (summary, start and end date). Participants, description, location... are not copied, but you may adjust the code to do it if you want.
+1. You may use a special character in your event's summary to prevent the redacting of the summary (cf. `FORCE_SHARING_SIGN` in the config).  
+   **NOTE:** This fork has disabled this option. All original summaries are shared.
+2. Only the minimum information of the events is copied (summary, start and end date). Participants, description, location... are not copied, but you may adjust the code to do it if you want.
 
 ### Recurring events
 
@@ -56,6 +57,10 @@ This means you **MUST NOT** use your mirroring target for anything else than pro
   - Once you downloaded the credentials JSON file, move it into this directory to `credentials.json`.
   - If there was any, remove the `token.json` file.
   - Run the script and follow the inline instructions. This will create a `token.json` file.
+
+**ical calendars**
+
+Zoho ical support has been added which returns `text/calendar` because their caldav calendar kept returning empty.
 
 **Mirroring mode**
 

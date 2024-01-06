@@ -27,8 +27,7 @@ function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
-  const str = `${year}-${pad(month)}-${pad(day)}`;
-  return str;
+  return `${year}-${pad(month)}-${pad(day)}`;
 }
 
 export function extractGCalEventData(evt: GCalEvent): CalendarEventData {
@@ -55,7 +54,8 @@ export function extractCalDAVEventData(evt: CalDAVEvent): CalendarEventData {
     end: (evt.allDayEvent ?
       { date: formatDate(evt.endDate) } : // yyyy-mm-dd format
       { dateTime: evt.endDate.toISOString() }),
-    transparency: evt.iCalendarData.includes('TRANSP:TRANSPARENT') ? 'transparent' : undefined,
+    // @ts-ignore
+    transparency: evt.iCalendarData?.includes('TRANSP:TRANSPARENT') ?? evt.transparent ? 'transparent' : undefined,
     description: evt.description
   };
 }
@@ -66,13 +66,12 @@ export function extractEventData(evt: CalendarEvent): CalendarEventData {
 }
 
 export function eventDataToGCalEvent(d: CalendarEventData): GCalEvent {
-  const newEvt: GCalEvent = {
+  return {
     summary: d.summary,
     start: d.start,
     end: d.end,
     transparency: d.transparency
   };
-  return newEvt;
 }
 
 export function compareEventsData(evtA: CalendarEventData, evtB: CalendarEventData): boolean {

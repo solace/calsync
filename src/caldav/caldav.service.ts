@@ -2,7 +2,8 @@ import https from 'https';
 import * as xml2js from 'xml2js'
 const parseString = xml2js.parseString;
 import moment from 'moment';
-import ICAL from 'ical.js';
+import nodeIcal, {VEvent} from 'node-ical';
+import ical from 'ical.js';
 import { CalendarEvent } from './calendar-event';
 import { CalendarEventDuration } from './calendar-event-duration';
 
@@ -26,7 +27,7 @@ export class CalDAVService {
 
     /**
      * Get the events from a CalDAV calendar for a specific range of dates
-     * @param {string} url - CalDAV Calendar URL
+     * @param {string} calendarUrl - CalDAV Calendar URL
      * @param {string} username - CalDAV Username
      * @param {string} password - CalDAV password
      * @param {string} startDate - Date from which to start, Any timeformat handled by moment.js
@@ -51,7 +52,7 @@ export class CalDAVService {
             '  </C:filter>\n' +
             '</C:calendar-query>';
         const depth = '1';
-        const method = 'REPORT';
+        const method = calendarUrl.match(/zoho/i) ? 'POST' : 'REPORT';
         return this.sendRequest(calendarUrl, username, password, xml, method, depth, true);
     }
 
@@ -195,10 +196,13 @@ export class CalDAVService {
 
             let response = '';
             let error;
+            let contentType = 'text/xml';
             const request = https.request(options, (res) => {
-
                 if (res.statusCode < 200 || res.statusCode >= 300) {
                     error = new Error(`response error: ${res.statusCode}`);
+                }
+                if (res.headers['content-type'].match(/text\/calendar/)) {
+                  contentType = 'text/calendar';
                 }
 
                 res.on('data', (chunk) => {
@@ -217,21 +221,26 @@ export class CalDAVService {
 
                 try {
                     if (isQuery) {
-                        parseString(response, (err, result) => {
-                            if (err) {
-                                throw err;
-                            }
-                            const data = result['d:multistatus']['d:response'];
-                            const resultEvents: CalendarEvent[] = [];
-                            if (data) {
-                                data.forEach((eventXML) => {
-                                    const iCalendarData = eventXML['d:propstat'][0]['d:prop'][0]['cal:calendar-data'][0];
-                                    const calendarEvent = this.parseToCalendarEvent(iCalendarData);
-                                    resultEvents.push(calendarEvent);
-                                });
-                            }
-                            resolve(resultEvents);
-                        });
+                        if (contentType === 'text/calendar') {
+                            const parsed = nodeIcal.sync.parseICS(response);
+                            resolve(Object.values(parsed).filter((el) => el.type === 'VEVENT' && moment(el.start).isAfter(new Date())).map((el: VEvent) => ({...el, startDate: el.start, endDate: el.end})));
+                        } else {
+                            parseString(response, (err, result) => {
+                                if (err) {
+                                    throw err;
+                                }
+                                const data = result['d:multistatus'] ? result['d:multistatus']['d:response'] : result['D:multistatus']['D:response'];
+                                const resultEvents: CalendarEvent[] = [];
+                                if (data) {
+                                    data.forEach((eventXML) => {
+                                        const iCalendarData = eventXML['d:propstat'] ? eventXML['d:propstat'][0]['d:prop'][0]['cal:calendar-data'][0] : eventXML['D:propstat'][0]['D:prop'][0]['calendar-data'][0]['_'];
+                                        const calendarEvent = this.parseToCalendarEvent(iCalendarData);
+                                        resultEvents.push(calendarEvent);
+                                    });
+                                }
+                                resolve(resultEvents.filter((el) => !el.isRecurring && moment(el.startDate).isAfter(new Date())));
+                            });
+                        }
                     } else {
                         resolve(response);
                     }
@@ -263,10 +272,10 @@ export class CalDAVService {
      * END:VCALENDAR
      */
     public parseToCalendarEvent(iCalendarData: string): CalendarEvent {
-        const jcalData = ICAL.parse(iCalendarData);
-        const vcalendar = new ICAL.Component(jcalData);
+        const jcalData = ical.parse(iCalendarData);
+        const vcalendar = new ical.Component(jcalData);
         const vevent = vcalendar.getFirstSubcomponent('vevent');
-        const event = new ICAL.Event(vevent);
+        const event = new ical.Event(vevent);
         const tzid = vcalendar.getFirstSubcomponent('vtimezone') ? vcalendar.getFirstSubcomponent('vtimezone').getFirstPropertyValue('tzid') : 'Europe/Berlin';
         const duration = {
             weeks: event.duration.weeks,
@@ -281,10 +290,10 @@ export class CalDAVService {
             attendees.push(value.getValues());
         });
 
-        // if you try to add a event with `METHOD:REQUEST` in another calendar you will get `The HTTP 415 Unsupported Media Type` error.
+        // if you try to add an event with `METHOD:REQUEST` in another calendar you will get `The HTTP 415 Unsupported Media Type` error.
         const iCalData = iCalendarData.replace('METHOD:REQUEST', '');
 
-        const calendarEvent = {
+        return {
             uid: event.uid,
             summary: event.summary,
             description: event.description,
@@ -302,7 +311,6 @@ export class CalDAVService {
             tzid,
             iCalendarData: iCalData
         };
-        return calendarEvent;
     }
 
 
@@ -319,12 +327,16 @@ class RecurrenceIterator{
     _event = null;
     _iter = null;
 
-    public constructor(event: ICAL.event) {
+    public constructor(event: ical.event) {
       this._event = event;
       this._iter = event.iterator();
     }
 
     public next() {
-      return this._event.getOccurrenceDetails(this._iter.next());
+      const next = this._iter.next();
+      if (next)
+        return this._event.getOccurrenceDetails(next);
+      else
+        return false;
     }
 }

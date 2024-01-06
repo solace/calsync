@@ -23,6 +23,11 @@ export interface CalendarEvent {
     location?: string;
 
     /**
+     * Sequence number.
+     */
+    sequence: number;
+
+    /**
      * Any timeformat handled by moment.js
      * EXAMPLE: new Date('Juni 20, 2019 11:24:00')
      */
